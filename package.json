@@ -1,0 +1,9 @@
+{
+  "name": "shukku-list",
+  "version": "2.0.0", 
+  "type": "module",
+  "scripts": {
+    "build": "echo 'Static files deployed directly'",
+    "dev": "echo 'Open index.html in browser'"
+  }
+}
