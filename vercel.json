@@ -35,8 +35,5 @@
       "src": "/(.*)",
       "dest": "/$1"
     }
-  ],
-  "env": {
-    "FIREBASE_SERVICE_ACCOUNT": "@firebase_service_account"
-  }
+  ]
 }
