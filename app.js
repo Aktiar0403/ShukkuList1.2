@@ -903,12 +903,77 @@ function initEventListeners() {
 /* ===========================
    Enhanced FCM Message Handling
    =========================== */
+/* ===========================
+   FCM: Enhanced token registration - FIXED
+   =========================== */
+async function registerFCMToken(uid) {
+  return safeAsyncOperation(async () => {
+    const isMessagingSupported = await isSupported();
+    if (!isMessagingSupported) {
+      console.log('FCM not supported in this environment');
+      return null;
+    }
+
+    // Import app dynamically to avoid circular dependencies
+    const { default: app } = await import('./firebase-config.js');
+    const messaging = getMessaging(app);
+    
+    if (Notification.permission === 'default') {
+      await Notification.requestPermission();
+    }
+
+    if (Notification.permission !== 'granted') {
+      console.log('Notification permission not granted');
+      return null;
+    }
+
+    const token = await getToken(messaging, { 
+      vapidKey: VAPID_KEY,
+      serviceWorkerRegistration: await navigator.serviceWorker?.ready
+    });
+    
+    if (!token) {
+      console.warn('No FCM token received');
+      return null;
+    }
+
+    // Store token in Firestore
+    const userRef = doc(db, 'users', uid);
+    const snap = await getDoc(userRef);
+    
+    if (!snap.exists()) {
+      await setDoc(userRef, { 
+        tokens: [token], 
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+    } else {
+      const existing = snap.data().tokens || [];
+      if (!existing.includes(token)) {
+        await updateDoc(userRef, { 
+          tokens: arrayUnion(token),
+          updatedAt: new Date().toISOString()
+        });
+      }
+    }
+    
+    console.log('FCM token registered successfully');
+    return token;
+  }, 'Failed to register for push notifications');
+}
+
+/* ===========================
+   Enhanced FCM Message Handling - FIXED
+   =========================== */
 function setupOnMessage() {
   safeAsyncOperation(async () => {
     const isMessagingSupported = await isSupported();
     if (!isMessagingSupported) return;
 
+    // Import app dynamically
+    const { default: app } = await import('./firebase-config.js');
     const messaging = getMessaging(app);
+    
     onMessage(messaging, (payload) => {
       if (payload && payload.notification) {
         const { title, body } = payload.notification;
